@@ -1,0 +1,23 @@
+{
+  "name": "douyin-share-resolver",
+  "version": "1.0.0",
+  "description": "输入某音分享文案/链接，返回该视频的全部可获取信息（播放地址、清晰度、封面、作者、配乐、互动数据等）",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "bin": {
+    "douyin-resolve": "./src/cli.js"
+  },
+  "main": "./src/resolver.js",
+  "exports": {
+    ".": "./src/resolver.js"
+  },
+  "scripts": {
+    "cli": "node src/cli.js",
+    "start": "node src/server.js",
+    "test": "node test/run.js"
+  },
+  "keywords": ["douyin", "某音", "resolver", "parser"],
+  "license": "MIT"
+}

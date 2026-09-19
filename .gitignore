@@ -1,0 +1,21 @@
+# 依赖
+node_modules/
+
+# 运行产出（队列状态 / 配置 / 文字稿）—— 不入库
+data/
+logs/
+
+# Python
+__pycache__/
+*.pyc
+*.tmp
+
+# ASR 模型权重（约 232MB，不当作源码入库）
+# 首次运行会自动从 ModelScope 下载到 asr-engine/models/；.gitkeep 保留目录结构。
+asr-engine/models/
+!asr-engine/models/.gitkeep
+
+# 编辑器 / 系统 / 密钥
+.DS_Store
+*.log
+.env

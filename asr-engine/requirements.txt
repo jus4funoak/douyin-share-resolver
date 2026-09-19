@@ -1,0 +1,13 @@
+# 纯 CPU 的 SenseVoice / FSMN-VAD 推理依赖（asr_cpu.py 需要）
+# 版本按本机 conda 环境实际安装钉死，确保 onnxruntime 与 funasr_onnx 兼容。
+# 注意：funasr_onnx 强制 numpy<2，不要升级到 2.x。
+numpy==1.26.4
+onnxruntime==1.30.0
+funasr_onnx==0.4.3
+soundfile==0.14.0
+imageio-ffmpeg==0.6.0
+scipy==1.13.1
+modelscope==1.40.1
+# 系统依赖（需先用 apt 安装，不在此列）：
+#   libsndfile1   —— soundfile 读 mp3/flac 需要
+#   ffmpeg        —— 视频/部分音频的转码回退

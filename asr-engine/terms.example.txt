@@ -1,0 +1,28 @@
+# 术语表 —— 每行一个词，用于把识别错的写法纠回标准写法
+# 以 # 开头的是注释，空行忽略
+
+# —— 缩写 / 产品名（最常见的一类错误：字母被拆开、数字被读成汉字）——
+GPT-4
+GPT-4o
+PostgreSQL
+Kubernetes
+Redis
+Nginx
+Docker
+WebSocket
+macOS
+Vue
+JavaScript
+TypeScript
+
+# —— 带连字符、容易被读散的 ——
+index-tts
+IndexTTS
+Dify
+ComfyUI
+Stable-Diffusion
+
+# —— 本机项目里常见的字（按需增删）——
+# 某音
+# TensorFlow
+# PyTorch

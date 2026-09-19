@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>某音批量转写 · SenseVoice</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --card: #ffffff; --border: #e3e2de;
+    --text: #2c2c2a; --muted: #6b6a66; --accent: #185fa5;
+    --ok: #3b6d11; --err: #a32d2d; --warn: #8a6100;
+    --run: #185fa5;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px; background: var(--bg); color: var(--text);
+    font: 14px/1.6 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+  .nav { display: flex; gap: 8px; margin-bottom: 16px; }
+  .nav a {
+    padding: 5px 14px; border: 1px solid var(--border); border-radius: 8px;
+    background: #fff; text-decoration: none; font-size: 13px; color: var(--muted);
+  }
+  .nav a.on { border-color: var(--accent); color: var(--accent); }
+  .panel { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .panel > h2 { font-size: 14px; font-weight: 600; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .panel > h2 small { font-weight: 400; color: var(--muted); font-size: 12px; }
+  textarea {
+    width: 100%; min-height: 96px; padding: 12px; border: 1px solid var(--border);
+    border-radius: 8px; font: 13px/1.6 inherit; resize: vertical; outline: none;
+  }
+  textarea:focus { border-color: var(--accent); }
+  button {
+    padding: 7px 16px; border: 1px solid var(--accent); background: var(--accent);
+    color: #fff; border-radius: 8px; font: inherit; cursor: pointer;
+  }
+  button:disabled { opacity: .5; cursor: not-allowed; }
+  button.ghost { background: #fff; color: var(--accent); }
+  button.mini { padding: 3px 9px; font-size: 12px; border-radius: 6px; }
+  button.danger { background: #fff; color: var(--err); border-color: #e5c4c4; }
+  .row { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+  label { color: var(--muted); font-size: 13px; display: inline-flex; gap: 6px; align-items: center; }
+  input[type=text], input[type=number], select {
+    padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;
+    font: 13px inherit; outline: none; background: #fff; color: var(--text);
+  }
+  input[type=text] { min-width: 220px; }
+  input[type=number] { width: 84px; }
+  input:focus, select:focus { border-color: var(--accent); }
+  .hint { color: var(--muted); font-size: 12px; margin-top: 8px; line-height: 1.75; }
+  code { background: #f1efe8; padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(195px, 1fr)); gap: 10px; }
+  .opt { display: flex; flex-direction: column; gap: 4px; }
+  .opt span { font-size: 12px; color: var(--muted); }
+  .stats { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip {
+    padding: 3px 11px; border-radius: 999px; font-size: 12px;
+    border: 1px solid var(--border); background: #fff; color: var(--muted);
+  }
+  .chip b { color: var(--text); font-weight: 600; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-weight: 500; color: var(--muted); font-size: 12px; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  td { padding: 9px 8px; border-bottom: 1px solid #f0efec; vertical-align: top; }
+  tr:hover td { background: #fcfcfa; }
+  .badge { padding: 2px 9px; border-radius: 999px; font-size: 12px; white-space: nowrap; }
+  .b-queued    { background: #f1efe8; color: var(--muted); }
+  .b-running   { background: #e5effa; color: var(--run); }
+  .b-done      { background: #e9f3e2; color: var(--ok); }
+  .b-failed    { background: #fbeaea; color: var(--err); }
+  .b-cancelled { background: #f1efe8; color: var(--muted); }
+  .bar { height: 4px; background: #eee; border-radius: 3px; overflow: hidden; margin-top: 5px; width: 120px; }
+  .bar > i { display: block; height: 100%; background: var(--accent); transition: width .3s; }
+  .title { max-width: 340px; }
+  .title div:first-child { line-height: 1.45; }
+  .title .meta { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .err-text { color: var(--err); font-size: 12px; max-width: 300px; word-break: break-all; }
+  pre.result {
+    background: #fcfcfa; border: 1px solid var(--border); border-radius: 8px;
+    padding: 14px; overflow: auto; max-height: 460px; font-size: 13px; line-height: 1.85;
+    white-space: pre-wrap; word-break: break-word; margin: 0;
+  }
+  .hidden { display: none; }
+  .empty { color: var(--muted); text-align: center; padding: 28px 0; font-size: 13px; }
+  .probe { font-size: 12px; padding: 6px 10px; border-radius: 8px; }
+  .probe.ok { background: #e9f3e2; color: var(--ok); }
+  .probe.bad { background: #fbeaea; color: var(--err); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>某音批量转写</h1>
+  <div class="sub">粘贴多条分享文案 → 自动排队 → 用本地 SenseVoice（纯 CPU）转写成文字</div>
+  <div class="nav">
+    <a href="/">单条解析</a>
+    <a href="/batch" class="on">批量转写</a>
+  </div>
+
+  <!-- 添加任务 -->
+  <div class="panel">
+    <h2>① 添加任务 <small>一行一条，也可以一坨乱文本，会自动拆链接</small></h2>
+    <textarea id="input" placeholder="每行一条某音分享文案，例如：&#10;2.05 复制打开某音，看看【xxx的作品】... https://v.douyin.com/xxxxx/ :0pm u@s.RX yGI:/ 12/06&#10;https://v.douyin.com/yyyyy/"></textarea>
+    <div class="row">
+      <input type="text" id="backend" placeholder="后端地址，留空表示同源">
+      <span id="probe" class="probe"></span>
+    </div>
+    <div class="row">
+      <button id="add">加入队列</button>
+      <button id="clear" class="ghost">清空已完成</button>
+      <button id="export-txt" class="ghost">导出 TXT</button>
+      <button id="export-json" class="ghost">导出 JSON</button>
+      <label><input type="checkbox" id="autosplit" checked> 自动按链接拆行</label>
+    </div>
+    <div class="hint">
+      粘贴后会自动提取每条文案里的 <code>v.douyin.com</code> 短链；
+      同一个链接已存在且未失败时会<b>自动跳过</b>，不会重复转写。
+    </div>
+  </div>
+
+  <!-- 运行参数 -->
+  <div class="panel">
+    <h2>② 运行参数 <small>改完点「保存生效」，只影响之后启动的任务</small></h2>
+    <div class="grid">
+      <label class="opt">
+        <span>并发任务数（最关键）</span>
+        <input type="number" id="c-concurrency" min="1" max="16">
+      </label>
+      <label class="opt">
+        <span>每任务线程数</span>
+        <input type="number" id="c-threads" min="1" max="64">
+      </label>
+      <label class="opt">
+        <span>批大小 batch</span>
+        <input type="number" id="c-batch" min="1" max="64">
+      </label>
+      <label class="opt">
+        <span>切段最大时长(秒)</span>
+        <input type="number" id="c-merge" min="1" max="60">
+      </label>
+      <label class="opt">
+        <span>音源选择</span>
+        <select id="c-source">
+          <option value="auto">自动（原声优先）</option>
+          <option value="video">视频音轨（稳）</option>
+          <option value="music">原声 MP3（省流量）</option>
+        </select>
+      </label>
+      <label class="opt">
+        <span>情感/事件 emoji</span>
+        <select id="c-emoji">
+          <option value="strip">去掉（默认）</option>
+          <option value="keep">保留</option>
+        </select>
+      </label>
+      <label class="opt">
+        <span>进程谦让 nice</span>
+        <input type="number" id="c-nice" min="0" max="19">
+      </label>
+      <label class="opt">
+        <span>术语表路径</span>
+        <input type="text" id="c-terms" style="min-width:0">
+      </label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="c-itn"> 数字口语规整（ITN）</label>
+      <label><input type="checkbox" id="c-keep"> 保留下载的音视频</label>
+      <button id="save-cfg">保存生效</button>
+      <span class="hint" style="margin:0">占用核数 ≈ 并发数 × 线程数</span>
+    </div>
+  </div>
+
+  <!-- 任务列表 -->
+  <div class="panel">
+    <h2>
+      ③ 任务队列
+      <span class="stats" id="stats"></span>
+      <span style="flex:1"></span>
+      <button id="pause" class="mini ghost">暂停</button>
+      <label style="font-size:12px"><input type="checkbox" id="auto" checked> 自动刷新</label>
+    </h2>
+    <div id="list"></div>
+    <div class="row">
+      <button id="retry-all" class="ghost">重试全部失败</button>
+      <button id="clear-all" class="danger">清空全部</button>
+    </div>
+  </div>
+
+  <div class="panel hidden" id="result-panel">
+    <h2>转写结果 <button id="close-result" class="mini ghost" style="margin-left:auto">收起</button></h2>
+    <pre class="result" id="result"></pre>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+const DEFAULT_BACKEND = location.protocol === 'file:' ? 'http://127.0.0.1:8848' : '';
+$('backend').value = localStorage.getItem('dsr_backend') ?? DEFAULT_BACKEND;
+$('backend').addEventListener('change', () => localStorage.setItem('dsr_backend', $('backend').value.trim()));
+const api = (p) => ($('backend').value.trim().replace(/\/+$/, '') || '') + p;
+
+async function req(path, opts) {
+  const r = await fetch(api(path), opts);
+  const t = await r.text();
+  try { return JSON.parse(t); } catch { throw new Error('后端返回非 JSON：' + t.slice(0, 120)); }
+}
+
+/* ----------------------------------------------------------- 添加任务 */
+$('add').addEventListener('click', async () => {
+  let raw = $('input').value.trim();
+  if (!raw) return;
+
+  let texts = [];
+  if ($('autosplit').checked) {
+    const links = raw.match(/https?:\/\/[^\s"'（）()【】]+/g) || [];
+    texts = links.length ? links : raw.split('\n');
+  } else {
+    texts = raw.split('\n');
+  }
+  texts = texts.map((s) => s.trim()).filter(Boolean);
+  if (!texts.length) return;
+
+  $('add').disabled = true;
+  try {
+    const d = await req('/api/queue', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ texts }),
+    });
+    if (!d.ok) throw new Error(d.error || '添加失败');
+    $('input').value = '';
+    const skip = d.skipped?.length ? `，跳过 ${d.skipped.length} 条重复` : '';
+    flash(`已加入 ${d.added.length} 条${skip}`);
+    render(await req('/api/queue'));
+  } catch (e) {
+    alert('添加失败：' + e.message);
+  } finally {
+    $('add').disabled = false;
+  }
+});
+
+/* --------------------------------------------------------- 参数表单 */
+const CFG_FIELDS = [
+  ['concurrency', 'c-concurrency', 'number'],
+  ['threads', 'c-threads', 'number'],
+  ['batch', 'c-batch', 'number'],
+  ['mergeLengthS', 'c-merge', 'number'],
+  ['source', 'c-source', 'str'],
+  ['emoji', 'c-emoji', 'str'],
+  ['nice', 'c-nice', 'number'],
+  ['termsFile', 'c-terms', 'str'],
+  ['itn', 'c-itn', 'check'],
+  ['keepAudio', 'c-keep', 'check'],
+];
+
+function fillConfig(cfg) {
+  for (const [key, elId, type] of CFG_FIELDS) {
+    const el = $(elId);
+    if (type === 'check') el.checked = !!cfg[key];
+    else el.value = cfg[key] ?? '';
+  }
+}
+
+$('save-cfg').addEventListener('click', async () => {
+  const patch = {};
+  for (const [key, elId, type] of CFG_FIELDS) {
+    const el = $(elId);
+    patch[key] = type === 'check' ? el.checked : (type === 'number' ? Number(el.value) : el.value);
+  }
+  try {
+    const d = await req('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    });
+    flash('参数已保存');
+    fillConfig(d.config);
+  } catch (e) { alert('保存失败：' + e.message); }
+});
+
+/* ------------------------------------------------------------- 渲染 */
+const STAGE = { resolve: '解析链接', download: '下载', asr: '转写中', save: '保存', done: '完成' };
+
+function render(d) {
+  const s = d.stats || {};
+  $('stats').innerHTML = [
+    ['排队', s.queued || 0], ['进行中', s.running || 0],
+    ['完成', s.done || 0], ['失败', s.failed || 0],
+  ].map(([k, v]) => `<span class="chip">${k} <b>${v}</b></span>`).join('')
+    + `<span class="chip">worker <b>${d.worker?.active || 0} 路</b>${d.worker?.paused ? '（暂停）' : ''}</span>`;
+
+  if (d.config) fillConfig(d.config);
+  $('pause').textContent = d.worker?.paused ? '继续' : '暂停';
+
+  const jobs = d.jobs || [];
+  if (!jobs.length) {
+    $('list').innerHTML = '<div class="empty">队列是空的，在上面粘贴分享文案开始吧</div>';
+    return;
+  }
+
+  $('list').innerHTML = `<table><thead><tr>
+      <th style="width:88px">状态</th><th>视频</th>
+      <th style="width:150px">进度</th><th style="width:230px">操作</th>
+    </tr></thead><tbody>${
+    jobs.slice().reverse().map(row).join('')
+  }</tbody></table>`;
+}
+
+function row(j) {
+  const cls = { queued: 'b-queued', running: 'b-running', done: 'b-done', failed: 'b-failed', cancelled: 'b-cancelled' }[j.status] || 'b-queued';
+  const label = { queued: '排队', running: STAGE[j.stage] || '处理中', done: '完成', failed: '失败', cancelled: '已取消' }[j.status];
+
+  const pct = j.status === 'done' ? 100 : (j.progress || 0);
+  const prog = j.status === 'running'
+    ? `<div class="bar"><i style="width:${pct}%"></i></div><span style="color:var(--muted);font-size:12px">${pct}%</span>`
+    : (j.durationSec ? `<span style="color:var(--muted);font-size:12px">${j.durationSec}s${j.rtfx ? ' · ' + j.rtfx + 'x' : ''}${j.chars ? ' · ' + j.chars + '字' : ''}</span>` : '-');
+
+  const acts = [];
+  if (j.status === 'done') {
+    acts.push(`<button class="mini ghost" data-act="view" data-id="${j.id}">查看</button>`);
+    acts.push(`<button class="mini ghost" data-act="dl" data-id="${j.id}">下载</button>`);
+  }
+  if (j.status === 'failed') acts.push(`<button class="mini" data-act="retry" data-id="${j.id}">重试</button>`);
+  if (j.status === 'running' || j.status === 'queued') acts.push(`<button class="mini danger" data-act="cancel" data-id="${j.id}">取消</button>`);
+  acts.push(`<button class="mini danger" data-act="del" data-id="${j.id}">删除</button>`);
+
+  return `<tr>
+    <td><span class="badge ${cls}">${label}</span></td>
+    <td class="title">
+      <div>${esc(j.title || '(等待解析…)')}</div>
+      <div class="meta">${esc(j.author || '')}${j.awemeId ? ' · ' + j.awemeId : ''}</div>
+      ${j.error ? `<div class="err-text">${esc(j.error)}</div>` : ''}
+    </td>
+    <td>${prog}</td>
+    <td>${acts.join(' ')}</td>
+  </tr>`;
+}
+
+/* ----------------------------------------------------------- 行操作 */
+$('list').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button[data-act]');
+  if (!btn) return;
+  const { act, id } = btn.dataset;
+  try {
+    if (act === 'view') {
+      const d = await req('/api/queue/' + id);
+      showResult(d.job);
+    } else if (act === 'dl') {
+      location.href = api('/api/queue/' + id + '/download');
+    } else if (act === 'retry') {
+      await req('/api/queue/' + id + '/retry', { method: 'POST', body: '{}' });
+    } else if (act === 'cancel') {
+      await req('/api/queue/' + id + '/cancel', { method: 'POST', body: '{}' });
+    } else if (act === 'del') {
+      if (!confirm('删除这条任务？out 目录里对应的 .txt / .json 文件会一起删除。')) return;
+      const r = await req('/api/queue/' + id, { method: 'DELETE' });
+      flash(r.files ? `已删除任务及 ${r.files} 个文件` : '已删除任务（没有关联文件）');
+    }
+    render(await req('/api/queue'));
+  } catch (err) { alert('操作失败：' + err.message); }
+});
+
+function showResult(job) {
+  const head = [
+    `标题：${job.title || '-'}`,
+    `作者：${job.author || '-'}`,
+    `链接：https://www.douyin.com/video/${job.awemeId}`,
+    `时长：${job.durationSec ?? '-'} 秒    转写耗时：${((job.costMs || 0) / 1000).toFixed(1)}s    实时倍速：${job.rtfx || '-'}x`,
+    '─'.repeat(50), '',
+  ].join('\n');
+  $('result').textContent = head + (job.text || '(无内容)');
+  $('result-panel').classList.remove('hidden');
+  $('result-panel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+$('close-result').addEventListener('click', () => $('result-panel').classList.add('hidden'));
+
+/* --------------------------------------------------------- 批量操作 */
+$('pause').addEventListener('click', async () => {
+  const paused = $('pause').textContent === '暂停';
+  await req('/api/queue/' + (paused ? 'pause' : 'resume'), { method: 'POST', body: '{}' });
+  render(await req('/api/queue'));
+});
+$('clear').addEventListener('click', async () => {
+  await req('/api/queue/clear', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+  render(await req('/api/queue'));
+});
+$('clear-all').addEventListener('click', async () => {
+  if (!confirm('清空全部任务？这会连带删除 out 目录里对应的 .txt / .json 文件，且不可恢复。')) return;
+  await req('/api/queue/clear', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ includeDone: true }) })
+    .then((r) => flash(`已清空 ${r.removed || 0} 条任务，删除 ${r.files || 0} 个文件`));
+  render(await req('/api/queue'));
+});
+$('retry-all').addEventListener('click', async () => {
+  const d = await req('/api/queue');
+  for (const j of (d.jobs || []).filter((x) => x.status === 'failed')) {
+    await req('/api/queue/' + j.id + '/retry', { method: 'POST', body: '{}' });
+  }
+  render(await req('/api/queue'));
+});
+$('export-txt').addEventListener('click', () => { location.href = api('/api/export?format=txt'); });
+$('export-json').addEventListener('click', () => { location.href = api('/api/export?format=json'); });
+
+/* ------------------------------------------------------- 提示与轮询 */
+let flashTimer;
+function flash(msg) {
+  const el = $('stats');
+  el.insertAdjacentHTML('beforeend', `<span class="chip" style="border-color:var(--ok);color:var(--ok)">${esc(msg)}</span>`);
+  clearTimeout(flashTimer);
+  flashTimer = setTimeout(() => render(lastState || {}), 2600);
+}
+
+let lastState = null;
+async function poll() {
+  try {
+    const d = await req('/api/queue');
+    lastState = d;
+    render(d);
+  } catch { /* 后端没起来，忽略 */ }
+}
+
+setInterval(() => { if ($('auto').checked) poll(); }, 1500);
+
+(async function init() {
+  try {
+    const p = await req('/api/probe');
+    $('probe').className = 'probe ' + (p.ok ? 'ok' : 'bad');
+    $('probe').textContent = p.ok
+      ? `引擎就绪${p.ffmpeg ? ' · ffmpeg 可用' : ' · ⚠ 无 ffmpeg'}`
+      : '引擎未就绪：' + (p.error || '').slice(0, 80);
+  } catch (e) {
+    $('probe').className = 'probe bad';
+    $('probe').textContent = '连不上后端：' + e.message.slice(0, 60);
+  }
+  poll();
+})();
+</script>
+</body>
+</html>
